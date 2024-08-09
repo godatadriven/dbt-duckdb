@@ -8,6 +8,8 @@ from .. import utils
 from dbt.adapters.contracts.connection import AdapterResponse
 from dbt.adapters.contracts.connection import Connection
 
+import duckdb
+
 
 class DuckDBCursorWrapper:
     def __init__(self, cursor):
@@ -155,7 +157,15 @@ class LocalEnvironment(Environment):
                     + ",".join(self._plugins.keys())
                 )
         plugin = self._plugins[plugin_name]
-        plugin.store(target_config)
+
+        handle = self.handle()
+        cursor = handle.cursor()
+
+        df = cursor.sql(target_config.config.model.compiled_code).arrow()
+        plugin.store(target_config, df)
+
+        cursor.close()
+        handle.close()
 
     def close(self):
         if self.conn:
