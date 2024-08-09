@@ -17,11 +17,12 @@ ref1 = """
 select 2 as a, 'test' as b 
 """
 
-delta1_sql = """
+def delta1_sql(location:str) -> str:
+    return f"""
     {{ config(
         materialized='external_table',
         plugin = 'delta',
-        location = '/workspaces/dbt-duckdb/delta_test',
+        location = '{location}',
         storage_options = {
             'test' : 'test'
         }
@@ -29,17 +30,17 @@ delta1_sql = """
     ) }}
     select * from {{ref('ref1')}} 
 """
-
-delta2_sql = """
-    {{ config(
+def delta2_sql(location:str) -> str:
+    return f"""
+    {{{{ config(
         materialized='external_table',
         plugin = 'delta',
-        location = '/workspaces/dbt-duckdb/delta2_test',
+        location = '{location}',
         mode = 'merge',
         unique_key = 'a'
 
-    ) }}
-    select * from {{ref('ref1')}} 
+    ) }}}}
+    select * from {{{{ref('ref1')}}}}
 """
 
 
@@ -75,20 +76,21 @@ class TestPlugins:
     def models(self, delta_test_table1):
         return {
 
-            "delta_table2.sql": delta2_sql,
+            "delta_table2.sql": delta2_sql(str(delta_test_table1)),
             "ref1.sql": ref1
         }
 
     def test_plugins(self, project):
         results = run_dbt()
-        # assert len(results) == 4
+        assert len(results) == 2
 
+        # materializing external view not yet supported
         # check_relations_equal(
         #     project.adapter,
         #     [
-        #         "delta_table3",
-        #         "delta_table3_expected",
+        #         "delta_table2",
+        #         "delta_table2_expected",
         #     ],
         # )
-        # res = project.run_sql("SELECT count(1) FROM 'delta_table3'", fetch="one")
+        # res = project.run_sql("SELECT count(1) FROM 'memory.delta_table2'", fetch="one")
         # assert res[0] == 2
