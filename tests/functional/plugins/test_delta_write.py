@@ -1,6 +1,6 @@
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 from dbt.tests.util import (
@@ -43,36 +43,6 @@ def delta2_sql(location: str) -> str:
     ) }}}}
     select * from {{{{ref('ref1')}}}}
 """
-
-
-class MockUnitycatalog:
-    def __init__(self, *args, **kwargs):
-        # Mock the resources as attributes with MagicMock
-        self.catalogs = MagicMock()
-        self.schemas = MagicMock()
-        self.tables = MagicMock()
-        self.volumes = MagicMock()
-        self.temporary_table_credentials = MagicMock()
-        self.temporary_volume_credentials = MagicMock()
-        self.functions = MagicMock()
-        self.with_raw_response = MagicMock()
-        self.with_streaming_response = MagicMock()
-
-        # Additional mock for methods or properties as needed
-        self.qs = MagicMock()
-        self.default_headers = MagicMock()
-
-    def copy(self, *args, **kwargs):
-        # Mock copy method to return a new instance of MockUnitycatalog
-        return MockUnitycatalog()
-
-    def with_options(self, *args, **kwargs):
-        # Alias for copy method
-        return self.copy()
-
-    def _make_status_error(self, err_msg, *, body, response):
-        # Mock for the _make_status_error method
-        return MagicMock()
 
 
 @pytest.mark.skip_profile("buenavista", "md")

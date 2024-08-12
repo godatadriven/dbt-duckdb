@@ -150,6 +150,8 @@ class Plugin(BasePlugin):
         table_name = target_config.relation.identifier
         schema_name = target_config.config.get("schema", "default")
         storage_options = target_config.config.get("storage_options", {})
+
+        # Convert the pyarrow schema to columns
         converted_schema = self.convert_schema_to_columns(schema=df.schema)
 
         if not self.schema_exists(schema_name):
