@@ -1,13 +1,11 @@
-import pytest
-from pathlib import Path
-import pandas as pd
 import tempfile
+from pathlib import Path
+from unittest.mock import patch, MagicMock
 
+import pytest
 from dbt.tests.util import (
-    check_relations_equal,
     run_dbt,
 )
-from deltalake.writer import write_deltalake
 
 delta_schema_yml = """
 
@@ -17,20 +15,23 @@ ref1 = """
 select 2 as a, 'test' as b 
 """
 
-def delta1_sql(location:str) -> str:
+
+def delta1_sql(location: str) -> str:
     return f"""
     {{ config(
         materialized='external_table',
         plugin = 'delta',
         location = '{location}',
         storage_options = {
-            'test' : 'test'
+    'test' : 'test'
         }
 
     ) }}
     select * from {{ref('ref1')}} 
 """
-def delta2_sql(location:str) -> str:
+
+
+def delta2_sql(location: str) -> str:
     return f"""
     {{{{ config(
         materialized='external_table',
@@ -42,6 +43,36 @@ def delta2_sql(location:str) -> str:
     ) }}}}
     select * from {{{{ref('ref1')}}}}
 """
+
+
+class MockUnitycatalog:
+    def __init__(self, *args, **kwargs):
+        # Mock the resources as attributes with MagicMock
+        self.catalogs = MagicMock()
+        self.schemas = MagicMock()
+        self.tables = MagicMock()
+        self.volumes = MagicMock()
+        self.temporary_table_credentials = MagicMock()
+        self.temporary_volume_credentials = MagicMock()
+        self.functions = MagicMock()
+        self.with_raw_response = MagicMock()
+        self.with_streaming_response = MagicMock()
+
+        # Additional mock for methods or properties as needed
+        self.qs = MagicMock()
+        self.default_headers = MagicMock()
+
+    def copy(self, *args, **kwargs):
+        # Mock copy method to return a new instance of MockUnitycatalog
+        return MockUnitycatalog()
+
+    def with_options(self, *args, **kwargs):
+        # Alias for copy method
+        return self.copy()
+
+    def _make_status_error(self, err_msg, *, body, response):
+        # Mock for the _make_status_error method
+        return MagicMock()
 
 
 @pytest.mark.skip_profile("buenavista", "md")
@@ -79,6 +110,24 @@ class TestPlugins:
             "delta_table2.sql": delta2_sql(str(delta_test_table1)),
             "ref1.sql": ref1
         }
+
+    @pytest.fixture(autouse=True)
+    def mock_initialize(self):
+        with patch("dbt.adapters.duckdb.plugins.delta.Plugin.initialize") as mock_initialize:
+            mock_initialize.return_value = None
+            yield mock_initialize
+
+    @pytest.fixture(autouse=True)
+    def mock_schema_exists(self):
+        with patch("dbt.adapters.duckdb.plugins.delta.Plugin.schema_exists") as mock_schema_exists:
+            mock_schema_exists.return_value = True
+            yield mock_schema_exists
+
+    @pytest.fixture(autouse=True)
+    def mock_table_exists(self):
+        with patch("dbt.adapters.duckdb.plugins.delta.Plugin.table_exists") as mock_table_exists:
+            mock_table_exists.return_value = True
+            yield mock_table_exists
 
     def test_plugins(self, project):
         results = run_dbt()

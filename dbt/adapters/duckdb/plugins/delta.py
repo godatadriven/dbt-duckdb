@@ -14,8 +14,11 @@ from ..utils import TargetConfig
 
 
 class Plugin(BasePlugin):
+    # Catalog configuration
     CATALOG_NAME: str = "unity"
     CATALOG_BASE_URL: str = "http://unity_catalog:8080/api/2.1/unity-catalog"
+
+    # The Unitycatalog client
     uc_client: Unitycatalog
 
     def initialize(self, config: Dict[str, Any]):
@@ -137,7 +140,7 @@ class Plugin(BasePlugin):
     # Future
     # TODO add databricks catalog
     def store(self, target_config: TargetConfig, df: pyarrow.lib.Table = None):
-        # Assert that the target_config has a location and relation
+        # Assert that the target_config has a location and relation identifier
         assert target_config.location is not None
         assert target_config.relation.identifier is not None
 
