@@ -111,25 +111,14 @@ class TestPlugins:
             "ref1.sql": ref1
         }
 
-    @pytest.fixture(autouse=True)
-    def mock_initialize(self):
-        with patch("dbt.adapters.duckdb.plugins.delta.Plugin.initialize") as mock_initialize:
-            mock_initialize.return_value = None
-            yield mock_initialize
+    @patch("dbt.adapters.duckdb.plugins.delta.Plugin.initialize")
+    @patch("dbt.adapters.duckdb.plugins.delta.Plugin.schema_exists")
+    @patch("dbt.adapters.duckdb.plugins.delta.Plugin.table_exists")
+    def test_plugins(self, mock_table_exists, mock_schema_exists, mock_initialize, project):
+        mock_initialize.return_value = None
+        mock_schema_exists.return_value = True
+        mock_table_exists.return_value = True
 
-    @pytest.fixture(autouse=True)
-    def mock_schema_exists(self):
-        with patch("dbt.adapters.duckdb.plugins.delta.Plugin.schema_exists") as mock_schema_exists:
-            mock_schema_exists.return_value = True
-            yield mock_schema_exists
-
-    @pytest.fixture(autouse=True)
-    def mock_table_exists(self):
-        with patch("dbt.adapters.duckdb.plugins.delta.Plugin.table_exists") as mock_table_exists:
-            mock_table_exists.return_value = True
-            yield mock_table_exists
-
-    def test_plugins(self, project):
         results = run_dbt()
         assert len(results) == 2
 
