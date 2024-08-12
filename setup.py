@@ -43,10 +43,12 @@ setup(
         # add dbt-core to ensure backwards compatibility of installation, this is not a functional dependency
         "dbt-core>=1.8.0",
     ],
-    extras_require={"glue": ["boto3", "mypy-boto3-glue"],
-                    "md": ["duckdb==1.0.0"],
-                    "unity": ["unitycatalog==0.1.1"],
-                    "delta": ["deltalake==0.18.2", "pyarrow==17.0.0"]},
+    extras_require={
+        "glue": ["boto3", "mypy-boto3-glue"],
+        "md": ["duckdb==1.0.0"],
+        "unity": ["unitycatalog==0.1.1"],
+        "delta": ["deltalake==0.18.2", "pyarrow==17.0.0"],
+    },
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: Apache Software License",

@@ -8,8 +8,6 @@ from .. import utils
 from dbt.adapters.contracts.connection import AdapterResponse
 from dbt.adapters.contracts.connection import Connection
 
-import duckdb
-
 
 class DuckDBCursorWrapper:
     def __init__(self, cursor):

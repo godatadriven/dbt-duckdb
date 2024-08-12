@@ -4,11 +4,13 @@ from typing import Dict
 
 import pyarrow
 import pyarrow.compute as pc
-from deltalake import DeltaTable, write_deltalake
+from deltalake import DeltaTable
+from deltalake import write_deltalake
 from unitycatalog import Unitycatalog
 
 from . import BasePlugin
-from ..utils import SourceConfig, TargetConfig
+from ..utils import SourceConfig
+from ..utils import TargetConfig
 
 
 class Plugin(BasePlugin):
@@ -88,12 +90,14 @@ class Plugin(BasePlugin):
                 "comment": f"Field {field.name}",  # Generic comment, modify as needed
                 "position": i,
                 "type_interval_type": None,
-                "type_json": json.dumps({
-                    "name": field.name,
-                    "type": json_type,
-                    "nullable": field.nullable,
-                    "metadata": field.metadata or {}
-                }),
+                "type_json": json.dumps(
+                    {
+                        "name": field.name,
+                        "type": json_type,
+                        "nullable": field.nullable,
+                        "metadata": field.metadata or {},
+                    }
+                ),
                 "type_precision": 0,
                 "type_scale": 0,
                 "type_text": json_type,
@@ -111,13 +115,20 @@ class Plugin(BasePlugin):
 
     def schema_exists(self, schema_name: str) -> bool:
         """Check if schema exists in the catalog."""
-        schemas = [schema.name for schema in self.uc_client.schemas.list(catalog_name=self.CATALOG_NAME).schemas]
+        schemas = [
+            schema.name
+            for schema in self.uc_client.schemas.list(catalog_name=self.CATALOG_NAME).schemas
+        ]
         return schema_name in schemas
 
     def table_exists(self, table_name: str, schema_name: str = "default") -> bool:
         """Check if table exists in the catalog."""
-        tables = [table.name for table in self.uc_client.tables.list(catalog_name=self.CATALOG_NAME,
-                                                                     schema_name=schema_name).tables]
+        tables = [
+            table.name
+            for table in self.uc_client.tables.list(
+                catalog_name=self.CATALOG_NAME, schema_name=schema_name
+            ).tables
+        ]
         return table_name in tables
 
     # Future
@@ -131,10 +142,7 @@ class Plugin(BasePlugin):
         converted_schema = self.convert_schema_to_columns(schema=df.schema)
 
         if not self.schema_exists(schema_name):
-            self.uc_client.schemas.create(
-                catalog_name=self.CATALOG_NAME,
-                name=schema_name
-            )
+            self.uc_client.schemas.create(catalog_name=self.CATALOG_NAME, name=schema_name)
 
         if not self.table_exists(table_name, schema_name):
             self.uc_client.tables.create(
@@ -144,7 +152,7 @@ class Plugin(BasePlugin):
                 name=table_name,
                 schema_name=schema_name,
                 table_type="EXTERNAL",
-                storage_location=table_path
+                storage_location=table_path,
             )
 
         if mode == "overwrite_partition":
@@ -186,9 +194,7 @@ class Plugin(BasePlugin):
                 target_dt = DeltaTable(table_path, storage_options=storage_options)
             except Exception:
                 # TODO handle this better
-                write_deltalake(
-                    table_or_uri=table_path, data=df, storage_options=storage_options
-                )
+                write_deltalake(table_or_uri=table_path, data=df, storage_options=storage_options)
 
             target_dt = DeltaTable(table_path, storage_options=storage_options)
             # TODO there is a problem if the column name is uppercase
@@ -227,13 +233,8 @@ def create_insert_partition(table_path, data, partitions, storage_options):
         print(
             f"Overwriting delta table under: {table_path} \nwith partition expr: {partition_expr}"
         )
-        write_deltalake(
-            table_path, data, partition_filters=partition_expr, mode="overwrite")
+        write_deltalake(table_path, data, partition_filters=partition_expr, mode="overwrite")
     else:
-        partitions = [
-            partition_name for (partition_name, partition_value) in partitions
-        ]
-        print(
-            f"Creating delta table under: {table_path} \nwith partitions: {partitions}"
-        )
+        partitions = [partition_name for (partition_name, partition_value) in partitions]
+        print(f"Creating delta table under: {table_path} \nwith partitions: {partitions}")
         write_deltalake(table_path, data, partition_by=partitions)

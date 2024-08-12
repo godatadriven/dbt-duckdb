@@ -170,7 +170,9 @@ class Environment(abc.ABC):
                 if extension.repository:
                     conn.execute(f"SET custom_extension_repository = '{extension.repository}'")
                 else:
-                    conn.execute(f"SET custom_extension_repository = 'http://extensions.duckdb.org'")
+                    conn.execute(
+                        "SET custom_extension_repository = 'http://extensions.duckdb.org'"
+                    )
                 conn.install_extension(extension.name)
                 conn.load_extension(extension.name)
 

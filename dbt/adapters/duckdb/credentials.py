@@ -5,14 +5,12 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Tuple
 from urllib.parse import urlparse
 
 from dbt_common.dataclass_schema import dbtClassMixin
 from dbt_common.exceptions import DbtRuntimeError
 
 from dbt.adapters.contracts.connection import Credentials
-from dbt.adapters.duckdb.secrets import DEFAULT_SECRET_PREFIX
 from dbt.adapters.duckdb.secrets import Secret
 
 
