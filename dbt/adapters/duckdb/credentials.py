@@ -78,6 +78,12 @@ class Retries(dbtClassMixin):
 
 
 @dataclass
+class Extension(dbtClassMixin):
+    name: str
+    repository: Optional[str] = None
+
+
+@dataclass
 class DuckDBCredentials(Credentials):
     database: str = "main"
     schema: str = "main"
@@ -88,7 +94,7 @@ class DuckDBCredentials(Credentials):
     config_options: Optional[Dict[str, Any]] = None
 
     # any DuckDB extensions we want to install and load (httpfs, parquet, etc.)
-    extensions: Optional[Tuple[str, ...]] = None
+    extensions: Optional[List[Extension]] = None
 
     # any additional pragmas we want to configure on our DuckDB connections;
     # a list of the built-in pragmas can be found here:
@@ -178,7 +184,7 @@ class DuckDBCredentials(Credentials):
             self._secrets = [
                 Secret.create(
                     secret_type=secret.pop("type"),
-                    name=secret.pop("name", f"{DEFAULT_SECRET_PREFIX}{num + 1}"),
+                    name=secret.pop("name", ""),
                     **secret,
                 )
                 for num, secret in enumerate(self.secrets)

@@ -1,15 +1,23 @@
+import json
 from typing import Any
 from typing import Dict
+
+import pyarrow
 import pyarrow.compute as pc
 from deltalake import DeltaTable, write_deltalake
+from unitycatalog import Unitycatalog
 
 from . import BasePlugin
 from ..utils import SourceConfig, TargetConfig
 
 
 class Plugin(BasePlugin):
+    CATALOG_NAME: str = "unity"
+    CATALOG_BASE_URL: str = "http://unity_catalog:8080/api/2.1/unity-catalog"
+    uc_client: Unitycatalog
+
     def initialize(self, config: Dict[str, Any]):
-        pass
+        self.uc_client: Unitycatalog = Unitycatalog(base_url=self.CATALOG_BASE_URL)
 
     def configure_cursor(self, cursor):
         pass
@@ -40,13 +48,102 @@ class Plugin(BasePlugin):
     def default_materialization(self):
         return "view"
 
+    @staticmethod
+    def convert_schema_to_columns(schema: pyarrow.Schema) -> list:
+        def pyarrow_type_to_json_type(data_type: pyarrow.DataType) -> str:
+            """Convert PyArrow type to a JSON-compatible type string."""
+            if pyarrow.types.is_int8(data_type):
+                return "INT"
+            elif pyarrow.types.is_int16(data_type):
+                return "INT"
+            elif pyarrow.types.is_int32(data_type):
+                return "INT"
+            elif pyarrow.types.is_int64(data_type):
+                return "INT"
+            elif pyarrow.types.is_float32(data_type):
+                return "DOUBLE"
+            elif pyarrow.types.is_float64(data_type):
+                return "DOUBLE"
+            elif pyarrow.types.is_string(data_type):
+                return "STRING"
+            elif pyarrow.types.is_boolean(data_type):
+                return "BOOLEAN"
+            elif pyarrow.types.is_decimal(data_type):
+                return "DOUBLE"
+            else:
+                raise NotImplementedError(f"Type {data_type} not supported")
 
-# Future
-# TODO add databricks catalog
-    def store(self, target_config: TargetConfig, df=None):
+        columns = []
+
+        for i, field in enumerate(schema):
+            data_type = field.type
+            json_type = pyarrow_type_to_json_type(data_type)
+
+            column = {
+                "name": field.name,
+                "type_name": json_type,
+                "nullable": field.nullable,
+                "comment": f"Field {field.name}",  # Generic comment, modify as needed
+                "position": i,
+                "type_interval_type": None,
+                "type_json": json.dumps({
+                    "name": field.name,
+                    "type": json_type,
+                    "nullable": field.nullable,
+                    "metadata": field.metadata or {}
+                }),
+                "type_precision": 0,
+                "type_scale": 0,
+                "type_text": json_type,
+                "partition_index": None,
+            }
+
+            # Adjust type precision and scale for decimal types
+            if pyarrow.types.is_decimal(data_type):
+                column["type_precision"] = data_type.precision
+                column["type_scale"] = data_type.scale
+
+            columns.append(column)
+
+        return columns
+
+    def schema_exists(self, schema_name: str) -> bool:
+        """Check if schema exists in the catalog."""
+        schemas = [schema.name for schema in self.uc_client.schemas.list(catalog_name=self.CATALOG_NAME).schemas]
+        return schema_name in schemas
+
+    def table_exists(self, table_name: str, schema_name: str = "default") -> bool:
+        """Check if table exists in the catalog."""
+        tables = [table.name for table in self.uc_client.tables.list(catalog_name=self.CATALOG_NAME,
+                                                                     schema_name=schema_name).tables]
+        return table_name in tables
+
+    # Future
+    # TODO add databricks catalog
+    def store(self, target_config: TargetConfig, df: pyarrow.lib.Table = None):
         mode = target_config.config.get("mode", "overwrite")
         table_path = target_config.location.path
+        table_name = target_config.relation.identifier
+        schema_name = target_config.config.get("schema", "default")
         storage_options = target_config.config.get("storage_options", {})
+        converted_schema = self.convert_schema_to_columns(schema=df.schema)
+
+        if not self.schema_exists(schema_name):
+            self.uc_client.schemas.create(
+                catalog_name=self.CATALOG_NAME,
+                name=schema_name
+            )
+
+        if not self.table_exists(table_name, schema_name):
+            self.uc_client.tables.create(
+                catalog_name=self.CATALOG_NAME,
+                columns=converted_schema,
+                data_source_format="DELTA",
+                name=table_name,
+                schema_name=schema_name,
+                table_type="EXTERNAL",
+                storage_location=table_path
+            )
 
         if mode == "overwrite_partition":
             partition_key = target_config.config.get("partition_key", None)
@@ -107,6 +204,7 @@ class Plugin(BasePlugin):
                 storage_options=storage_options,
             )
 
+
 def table_exists(table_path, storage_options):
     # this is bad, i have to find the way to see if there is table behind path
     try:
@@ -114,7 +212,6 @@ def table_exists(table_path, storage_options):
     except Exception:
         return False
     return True
-
 
 
 def create_insert_partition(table_path, data, partitions, storage_options):
