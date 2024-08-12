@@ -115,25 +115,33 @@ class Plugin(BasePlugin):
 
     def schema_exists(self, schema_name: str) -> bool:
         """Check if schema exists in the catalog."""
-        schemas = [
-            schema.name
-            for schema in self.uc_client.schemas.list(catalog_name=self.CATALOG_NAME).schemas
-        ]
-        return schema_name in schemas
+        schema_list_request = self.uc_client.schemas.list(catalog_name=self.CATALOG_NAME)
+
+        if not schema_list_request.schemas:
+            return False
+
+        return schema_name in [schema for schema in schema_list_request.schemas]
 
     def table_exists(self, table_name: str, schema_name: str = "default") -> bool:
         """Check if table exists in the catalog."""
-        tables = [
-            table.name
-            for table in self.uc_client.tables.list(
-                catalog_name=self.CATALOG_NAME, schema_name=schema_name
-            ).tables
-        ]
-        return table_name in tables
+
+        table_list_request = self.uc_client.tables.list(
+            catalog_name=self.CATALOG_NAME, schema_name=schema_name
+        )
+
+        if not table_list_request.tables:
+            return False
+
+        return table_name in [table.name for table in table_list_request.tables]
 
     # Future
     # TODO add databricks catalog
     def store(self, target_config: TargetConfig, df: pyarrow.lib.Table = None):
+        # Assert that the target_config has a location and relation
+        assert target_config.location is not None
+        assert target_config.relation.identifier is not None
+
+        # Get required variables from the target configuration
         mode = target_config.config.get("mode", "overwrite")
         table_path = target_config.location.path
         table_name = target_config.relation.identifier
