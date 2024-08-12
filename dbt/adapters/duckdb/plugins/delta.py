@@ -70,6 +70,8 @@ class Plugin(BasePlugin):
                 return "BOOLEAN"
             elif pyarrow.types.is_decimal(data_type):
                 return "DOUBLE"
+            elif pyarrow.types.is_date32(data_type):
+                return "DATE"
             else:
                 raise NotImplementedError(f"Type {data_type} not supported")
 
