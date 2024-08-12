@@ -183,11 +183,12 @@ class DuckDBCredentials(Credentials):
         if self.secrets:
             self._secrets = [
                 Secret.create(
-                    secret_type=secret.pop("type"),
-                    name=secret.pop("name", ""),
+                    secret_type=secret_type,
+                    name=secret.pop("name", f"__default_{secret_type}"),
                     **secret,
                 )
-                for num, secret in enumerate(self.secrets)
+                for secret in self.secrets
+                if (secret_type := secret.pop("type"))
             ]
 
     def secrets_sql(self) -> List[str]:
