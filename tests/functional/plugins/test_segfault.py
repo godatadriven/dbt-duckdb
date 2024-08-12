@@ -1,10 +1,9 @@
-import pytest
-from pathlib import Path
-import pandas as pd
 import tempfile
+from pathlib import Path
 
+import pandas as pd
+import pytest
 from dbt.tests.util import (
-    check_relations_equal,
     run_dbt,
 )
 from deltalake.writer import write_deltalake
@@ -19,8 +18,7 @@ sources:
       - name: table_1
         description: "An delta table"
         meta:
-          delta_table_path: "/workspaces/dbt-duckdb/lineitem"
-
+          delta_table_path: "{delta_table_path}"
 """
 
 delta1_sql = """
@@ -64,7 +62,7 @@ class TestPlugins:
     def models(self, delta_test_table1):
         return {
             "source_schema.yml": delta_schema_yml.format(
-                test_delta_path1=delta_test_table1
+                delta_table_path=delta_test_table1
             ),
             "delta_table1.sql": delta1_sql,
         }
