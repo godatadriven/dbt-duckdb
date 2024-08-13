@@ -4,6 +4,7 @@ import json
 from enum import Enum
 from typing import Any
 from typing import Dict
+from typing import Literal
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -11,6 +12,7 @@ from deltalake import DeltaTable
 from deltalake import write_deltalake
 from deltalake._internal import TableNotFoundError
 from unitycatalog import Unitycatalog
+from unitycatalog.types.table_create_params import Column
 
 from . import BasePlugin
 from ..utils import SourceConfig
@@ -49,8 +51,34 @@ class SecretTypeMissingError(Exception):
     pass
 
 
-def pyarrow_schema_to_columns(schema: pa.Schema) -> list:
-    def pyarrow_type_to_json_type(data_type: pa.DataType) -> str:
+def pyarrow_schema_to_columns(schema: pa.Schema) -> list[Column]:
+    """Convert a PyArrow schema to a list of Unitycatalog Column objects."""
+
+    def pyarrow_type_to_supported_uc_json_type(
+        data_type: pa.DataType,
+    ) -> Literal[
+        "BOOLEAN",
+        "BYTE",
+        "SHORT",
+        "INT",
+        "LONG",
+        "FLOAT",
+        "DOUBLE",
+        "DATE",
+        "TIMESTAMP",
+        "TIMESTAMP_NTZ",
+        "STRING",
+        "BINARY",
+        "DECIMAL",
+        "INTERVAL",
+        "ARRAY",
+        "STRUCT",
+        "MAP",
+        "CHAR",
+        "NULL",
+        "USER_DEFINED_TYPE",
+        "TABLE_TYPE",
+    ]:
         """Convert PyArrow type to a JSON-compatible type string."""
         if pa.types.is_int8(data_type):
             return "INT"
@@ -79,16 +107,15 @@ def pyarrow_schema_to_columns(schema: pa.Schema) -> list:
 
     for i, field in enumerate(schema):
         data_type = field.type
-        json_type = pyarrow_type_to_json_type(data_type)
+        json_type = pyarrow_type_to_supported_uc_json_type(data_type)
 
-        column = {
-            "name": field.name,
-            "type_name": json_type,
-            "nullable": field.nullable,
-            "comment": f"Field {field.name}",  # Generic comment, modify as needed
-            "position": i,
-            "type_interval_type": None,
-            "type_json": json.dumps(
+        column = Column(
+            name=field.name,
+            type_name=json_type,
+            nullable=field.nullable,
+            comment=f"Field {field.name}",  # Generic comment, modify as needed
+            position=i,
+            type_json=json.dumps(
                 {
                     "name": field.name,
                     "type": json_type,
@@ -96,11 +123,10 @@ def pyarrow_schema_to_columns(schema: pa.Schema) -> list:
                     "metadata": field.metadata or {},
                 }
             ),
-            "type_precision": 0,
-            "type_scale": 0,
-            "type_text": json_type,
-            "partition_index": None,
-        }
+            type_precision=0,
+            type_scale=0,
+            type_text=json_type,
+        )
 
         # Adjust type precision and scale for decimal types
         if pa.types.is_decimal(data_type):
