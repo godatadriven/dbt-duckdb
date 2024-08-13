@@ -51,58 +51,73 @@ class SecretTypeMissingError(Exception):
     pass
 
 
+UCSupportedTypeLiteral = Literal[
+    "BOOLEAN",
+    "BYTE",
+    "SHORT",
+    "INT",
+    "LONG",
+    "FLOAT",
+    "DOUBLE",
+    "DATE",
+    "TIMESTAMP",
+    "TIMESTAMP_NTZ",
+    "STRING",
+    "BINARY",
+    "DECIMAL",
+    "INTERVAL",
+    "ARRAY",
+    "STRUCT",
+    "MAP",
+    "CHAR",
+    "NULL",
+    "USER_DEFINED_TYPE",
+    "TABLE_TYPE",
+]
+
+
+def pyarrow_type_to_supported_uc_json_type(data_type: pa.DataType) -> UCSupportedTypeLiteral:
+    """Convert a PyArrow data type to a supported Unitycatalog JSON type."""
+    if pa.types.is_boolean(data_type):
+        return "BOOLEAN"
+    elif pa.types.is_int8(data_type):
+        return "BYTE"
+    elif pa.types.is_int16(data_type):
+        return "SHORT"
+    elif pa.types.is_int32(data_type):
+        return "INT"
+    elif pa.types.is_int64(data_type):
+        return "LONG"
+    elif pa.types.is_float32(data_type):
+        return "FLOAT"
+    elif pa.types.is_float64(data_type):
+        return "DOUBLE"
+    elif pa.types.is_date32(data_type):
+        return "DATE"
+    elif pa.types.is_timestamp(data_type):
+        return "TIMESTAMP"
+    elif pa.types.is_string(data_type):
+        return "STRING"
+    elif pa.types.is_binary(data_type):
+        return "BINARY"
+    elif pa.types.is_decimal(data_type):
+        return "DECIMAL"
+    elif pa.types.is_duration(data_type):
+        return "INTERVAL"
+    elif pa.types.is_list(data_type):
+        return "ARRAY"
+    elif pa.types.is_struct(data_type):
+        return "STRUCT"
+    elif pa.types.is_map(data_type):
+        return "MAP"
+    elif pa.types.is_null(data_type):
+        return "NULL"
+    else:
+        raise NotImplementedError(f"Type {data_type} not supported")
+
+
 def pyarrow_schema_to_columns(schema: pa.Schema) -> list[Column]:
     """Convert a PyArrow schema to a list of Unitycatalog Column objects."""
-
-    def pyarrow_type_to_supported_uc_json_type(
-        data_type: pa.DataType,
-    ) -> Literal[
-        "BOOLEAN",
-        "BYTE",
-        "SHORT",
-        "INT",
-        "LONG",
-        "FLOAT",
-        "DOUBLE",
-        "DATE",
-        "TIMESTAMP",
-        "TIMESTAMP_NTZ",
-        "STRING",
-        "BINARY",
-        "DECIMAL",
-        "INTERVAL",
-        "ARRAY",
-        "STRUCT",
-        "MAP",
-        "CHAR",
-        "NULL",
-        "USER_DEFINED_TYPE",
-        "TABLE_TYPE",
-    ]:
-        """Convert PyArrow type to a JSON-compatible type string."""
-        if pa.types.is_int8(data_type):
-            return "INT"
-        elif pa.types.is_int16(data_type):
-            return "INT"
-        elif pa.types.is_int32(data_type):
-            return "INT"
-        elif pa.types.is_int64(data_type):
-            return "INT"
-        elif pa.types.is_float32(data_type):
-            return "DOUBLE"
-        elif pa.types.is_float64(data_type):
-            return "DOUBLE"
-        elif pa.types.is_string(data_type):
-            return "STRING"
-        elif pa.types.is_boolean(data_type):
-            return "BOOLEAN"
-        elif pa.types.is_decimal(data_type):
-            return "DOUBLE"
-        elif pa.types.is_date32(data_type):
-            return "DATE"
-        else:
-            raise NotImplementedError(f"Type {data_type} not supported")
-
     columns = []
 
     for i, field in enumerate(schema):
