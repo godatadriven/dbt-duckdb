@@ -262,6 +262,9 @@ class Plugin(BasePlugin):
                     table_type="EXTERNAL",
                     storage_location=table_path,
                 )
+            else:
+                # TODO: Add support for schema checks/schema evolution with existing schema and dataframe schema
+                pass
 
         if mode == WriteModes.OVERWRITE_PARTITION:
             if not partition_key:
