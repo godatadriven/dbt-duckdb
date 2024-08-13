@@ -81,13 +81,11 @@ class TestPlugins:
             "ref1.sql": ref1
         }
 
-    @patch("dbt.adapters.duckdb.plugins.delta.Plugin.initialize")
-    @patch("dbt.adapters.duckdb.plugins.delta.Plugin.schema_exists")
-    @patch("dbt.adapters.duckdb.plugins.delta.Plugin.table_exists")
-    def test_plugins(self, mock_table_exists, mock_schema_exists, mock_initialize, project):
-        mock_initialize.return_value = None
-        mock_schema_exists.return_value = True
-        mock_table_exists.return_value = True
+    @patch("dbt.adapters.duckdb.plugins.delta.uc_schema_exists")
+    @patch("dbt.adapters.duckdb.plugins.delta.uc_table_exists")
+    def test_plugins(self, mock_uc_table_exists, mock_uc_schema_exists, project):
+        mock_uc_schema_exists.return_value = True
+        mock_uc_table_exists.return_value = True
 
         results = run_dbt()
         assert len(results) == 2
