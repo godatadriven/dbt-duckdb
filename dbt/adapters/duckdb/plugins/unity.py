@@ -21,7 +21,7 @@ from ..utils import TargetConfig
 class StorageFormat(str, Enum):
     """Enum class for the storage formats supported by the plugin."""
 
-    DELTA = "delta"
+    DELTA = "DELTA"
 
 
 class StorageLocationMissingError(Exception):
@@ -172,6 +172,9 @@ class Plugin(BasePlugin):
     # The name of the catalog
     catalog_name: str = "unity"
 
+    # The default storage format
+    default_format = StorageFormat.DELTA
+
     # The Unitycatalog client
     uc_client: Unitycatalog
 
@@ -238,10 +241,7 @@ class Plugin(BasePlugin):
         unique_key = target_config.config.get("unique_key", None)
 
         # Get the storage format from the plugin configuration
-
-        # Default to DELTA
-        default_format = StorageFormat.DELTA
-        storage_format = self.plugin_config.get("format", default_format)
+        storage_format = self.plugin_config.get("format", self.default_format)
 
         # Convert the pa schema to columns
         converted_schema = pyarrow_schema_to_columns(schema=df.schema)
@@ -254,7 +254,7 @@ class Plugin(BasePlugin):
                 self.uc_client.tables.create(
                     catalog_name=self.catalog_name,
                     columns=converted_schema,
-                    data_source_format="DELTA",
+                    data_source_format=storage_format,
                     name=table_name,
                     schema_name=schema_name,
                     table_type="EXTERNAL",
