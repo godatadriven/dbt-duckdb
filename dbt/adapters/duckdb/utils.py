@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
 from typing import Dict
@@ -8,6 +10,8 @@ from typing import Sequence
 from dbt.adapters.base.column import Column
 from dbt.adapters.base.relation import BaseRelation
 from dbt.adapters.contracts.relation import RelationConfig
+
+
 # TODO
 # from dbt.context.providers import RuntimeConfigObject
 
@@ -88,3 +92,17 @@ class TargetConfig:
         if self.location:
             base["location"] = self.location.as_dict()
         return base
+
+
+def find_secrets_by_type(secrets: list[dict], secret_type: str) -> dict:
+    """Find secrets of a specific type in the secrets dictionary."""
+    for secret in secrets:
+        if secret.get("type") == secret_type:
+            return secret
+    raise SecretTypeMissingError(f"Secret type {secret_type} not found in the secrets!")
+
+
+class SecretTypeMissingError(Exception):
+    """Exception raised when the secret type is missing from the secrets dictionary."""
+
+    pass

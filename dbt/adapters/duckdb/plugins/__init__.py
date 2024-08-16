@@ -90,6 +90,7 @@ class BasePlugin:
         """
         self.name = name
         self.creds = credentials
+        self.plugin_config = plugin_config
         self.initialize(plugin_config)
 
     def initialize(self, plugin_config: Dict[str, Any]):
