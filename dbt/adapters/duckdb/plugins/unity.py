@@ -235,7 +235,12 @@ class Plugin(BasePlugin):
 
         # Get optional variables from the target configuration
         mode = target_config.config.get("mode", "overwrite")
-        schema_name = target_config.config.get("schema", "default")
+        schema_name = target_config.config.get("schema")
+
+        # If schema is not provided or empty set to default"
+        if not schema_name or schema_name == "":
+            schema_name = "default"
+
         storage_options = target_config.config.get("storage_options", {})
         partition_key = target_config.config.get("partition_key", None)
         unique_key = target_config.config.get("unique_key", None)

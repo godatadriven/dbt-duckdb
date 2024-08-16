@@ -1,6 +1,12 @@
 import threading
 
+import pyarrow
 from dbt_common.exceptions import DbtRuntimeError
+from duckdb import CatalogException
+from tenacity import retry
+from tenacity import retry_if_exception_type
+from tenacity import stop_after_attempt
+from tenacity import wait_fixed
 
 from . import Environment
 from .. import credentials
@@ -140,6 +146,28 @@ class LocalEnvironment(Environment):
         cursor.close()
         handle.close()
 
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_fixed(1),
+        retry=retry_if_exception_type(CatalogException),
+    )
+    def get_arrow_dataframe(self, compiled_code: str) -> pyarrow.lib.Table:
+        try:
+            # Get the handle and cursor
+            handle = self.handle()
+            cursor = handle.cursor()
+
+            # Execute the compiled code
+            df = cursor.sql(compiled_code).arrow()
+
+            return df
+        except CatalogException as e:
+            # Reset the connection to refresh the catalog
+            self.conn = None
+
+            # Raise the exception to retry the operation
+            raise e
+
     def store_relation(self, plugin_name: str, target_config: utils.TargetConfig) -> None:
         if plugin_name not in self._plugins:
             if plugin_name.startswith("glue|"):
@@ -159,7 +187,9 @@ class LocalEnvironment(Environment):
         handle = self.handle()
         cursor = handle.cursor()
 
-        df = cursor.sql(target_config.config.model.compiled_code).arrow()
+        # Get the arrow dataframe
+        df = self.get_arrow_dataframe(compiled_code=target_config.config.model.compiled_code)
+
         plugin.store(target_config, df)
 
         cursor.close()

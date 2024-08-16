@@ -40,6 +40,7 @@ setup(
         "dbt-common>=1,<2",
         "dbt-adapters>=1,<2",
         "duckdb>=1.0.0",
+        "tenacity>=7.0.0",
         # add dbt-core to ensure backwards compatibility of installation, this is not a functional dependency
         "dbt-core>=1.8.0",
     ],
