@@ -152,6 +152,7 @@ class LocalEnvironment(Environment):
             stop=stop_after_attempt(max_attempts),
             wait=wait_fixed(wait_time),
             retry=retry_if_exception_type(CatalogException),
+            reraise=True,
         )
 
     def get_arrow_dataframe(
@@ -182,7 +183,9 @@ class LocalEnvironment(Environment):
                 self.conn = None
 
                 # Raise the exception to retry the operation
-                raise e
+                raise CatalogException(
+                    f"{str(e)}: failed to execute compiled code {compiled_code}"
+                )
 
         return execute_query()
 
