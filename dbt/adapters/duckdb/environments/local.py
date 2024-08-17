@@ -146,27 +146,45 @@ class LocalEnvironment(Environment):
         cursor.close()
         handle.close()
 
-    @retry(
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(1),
-        retry=retry_if_exception_type(CatalogException),
-    )
-    def get_arrow_dataframe(self, compiled_code: str) -> pyarrow.lib.Table:
-        try:
-            # Get the handle and cursor
-            handle = self.handle()
-            cursor = handle.cursor()
+    @staticmethod
+    def get_retry_decorator(max_attempts: int, wait_time: float):
+        return retry(
+            stop=stop_after_attempt(max_attempts),
+            wait=wait_fixed(wait_time),
+            retry=retry_if_exception_type(CatalogException),
+        )
 
-            # Execute the compiled code
-            df = cursor.sql(compiled_code).arrow()
+    def get_arrow_dataframe(
+        self, compiled_code: str, retries: int, wait_time: float
+    ) -> pyarrow.lib.Table:
+        """Get the arrow dataframe from the compiled code.
 
-            return df
-        except CatalogException as e:
-            # Reset the connection to refresh the catalog
-            self.conn = None
+        :param compiled_code: Compiled code
+        :param retries: Number of retries
+        :param wait_time: Wait time between retries
 
-            # Raise the exception to retry the operation
-            raise e
+        :returns: Arrow dataframe
+        """
+
+        @self.get_retry_decorator(retries, wait_time)
+        def execute_query():
+            try:
+                # Get the handle and cursor
+                handle = self.handle()
+                cursor = handle.cursor()
+
+                # Execute the compiled code
+                df = cursor.sql(compiled_code).arrow()
+
+                return df
+            except CatalogException as e:
+                # Reset the connection to refresh the catalog
+                self.conn = None
+
+                # Raise the exception to retry the operation
+                raise e
+
+        return execute_query()
 
     def store_relation(self, plugin_name: str, target_config: utils.TargetConfig) -> None:
         if plugin_name not in self._plugins:
@@ -187,8 +205,16 @@ class LocalEnvironment(Environment):
         handle = self.handle()
         cursor = handle.cursor()
 
+        # Get the number of retries and the wait time for a dbt model
+        retries = int(target_config.config.get("retries", 30))
+        wait_time = float(target_config.config.get("wait_time", 0.15))
+
         # Get the arrow dataframe
-        df = self.get_arrow_dataframe(compiled_code=target_config.config.model.compiled_code)
+        df = self.get_arrow_dataframe(
+            compiled_code=target_config.config.model.compiled_code,
+            retries=retries,
+            wait_time=wait_time,
+        )
 
         plugin.store(target_config, df)
 
