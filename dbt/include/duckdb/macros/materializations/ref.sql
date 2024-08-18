@@ -1,31 +1,52 @@
-{% macro ref(model_name) %}
-    {%- set plugin = config.get('plugin') -%}
-    {%- set model_ref = builtins.ref(model_name) -%}
+{% macro ref() %}
+    -- default ref: https://docs.getdbt.com/reference/dbt-jinja-functions/builtins
+    -- extract user-provided positional and keyword arguments
+    {% set version = kwargs.get('version') or kwargs.get('v') %}
+    {% set packagename = none %}
+    {%- if (varargs | length) == 1 -%}
+        {% set modelname = varargs[0] %}
+    {%- else -%}
+        {% set packagename = varargs[0] %}
+        {% set modelname = varargs[1] %}
+    {% endif %}
+
+    -- call builtins.ref based on provided positional arguments
+    {% set rel = None %}
+    {% if packagename is not none %}
+        {% set rel = builtins.ref(packagename, modelname, version=version) %}
+    {% else %}
+        {% set rel = builtins.ref(modelname, version=version) %}
+    {% endif %}
 
     {% if execute %}
-        {% for node in graph.nodes.values() %}
-            {% if node.name == model_name %}
-                {% set materialization = node.config.materialized %}
+        {% if graph.get('nodes') %}
+            {% for node in graph.nodes.values() %}
+                {% if node.name == modelname %}
+                    -- Get the associated materialization from the node config
+                    {% set materialization = node.config.materialized %}
+                    -- Get the associated plugin from the node config
+                    {% set plugin = node.config.plugin %}
 
-                {% if plugin == 'unity' and materialization == 'external_table'%}
-                    {% set catalog = var('catalog', 'unity') %}
-                    {% set schema = config.get('schema') %}
+                    {% if plugin == 'unity' and materialization == 'external_table' %}
+                        {% set catalog = var('catalog', 'unity') %}
+                        -- Get the associated schema from the node config
+                        {% set schema = node.config.schema %}
 
-                    {% if not schema %}
-                        {% set schema = 'default' %}
-                    {% endif %}
+                        {% if not schema %}
+                            {% set schema = 'default' %}
+                        {% endif %}
 
-                    {% if schema != 'default' %}
-                        -- If the ref already includes schema and model name
-                        {{ catalog }}.{{ model_ref[0] }}.{{ model_ref[1] }}
+                        {% set new_rel = catalog ~ '.' ~ schema ~ '.' ~ rel.identifier %}
+
+                        {% do return(new_rel) %}
                     {% else %}
-                        -- If the ref only includes the model name
-                        {{ catalog }}.{{ schema }}.{{ model_ref.identifier }}
+                        {% do return(rel) %}
                     {% endif %}
-                {% else %}
-                        {{ model_ref }}
                 {% endif %}
-            {% endif %}
-        {% endfor %}
+            {% endfor %}
+        {% endif %}
     {% endif %}
+
+    -- return the original relation object by default
+    {% do return(rel) %}
 {% endmacro %}
