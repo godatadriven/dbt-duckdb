@@ -251,23 +251,22 @@ class Plugin(BasePlugin):
         # Convert the pa schema to columns
         converted_schema = pyarrow_schema_to_columns(schema=df.schema)
 
-        if self.uc_client is not None:
-            if not uc_schema_exists(self.uc_client, schema_name, self.catalog_name):
-                self.uc_client.schemas.create(catalog_name=self.catalog_name, name=schema_name)
+        if not uc_schema_exists(self.uc_client, schema_name, self.catalog_name):
+            self.uc_client.schemas.create(catalog_name=self.catalog_name, name=schema_name)
 
-            if not uc_table_exists(self.uc_client, table_name, schema_name, self.catalog_name):
-                self.uc_client.tables.create(
-                    catalog_name=self.catalog_name,
-                    columns=converted_schema,
-                    data_source_format=storage_format,
-                    name=table_name,
-                    schema_name=schema_name,
-                    table_type="EXTERNAL",
-                    storage_location=table_path,
-                )
-            else:
-                # TODO: Add support for schema checks/schema evolution with existing schema and dataframe schema
-                pass
+        if not uc_table_exists(self.uc_client, table_name, schema_name, self.catalog_name):
+            self.uc_client.tables.create(
+                catalog_name=self.catalog_name,
+                columns=converted_schema,
+                data_source_format=storage_format,
+                name=table_name,
+                schema_name=schema_name,
+                table_type="EXTERNAL",
+                storage_location=table_path,
+            )
+        else:
+            # TODO: Add support for schema checks/schema evolution with existing schema and dataframe schema
+            pass
 
         if storage_format == StorageFormat.DELTA:
             from .delta import delta_write
