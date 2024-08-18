@@ -20,28 +20,26 @@
 
     {% if execute %}
         {% if graph.get('nodes') %}
-            {% for node in graph.nodes.values() %}
-                {% if node.name == modelname %}
-                    -- Get the associated materialization from the node config
-                    {% set materialization = node.config.materialized %}
-                    -- Get the associated plugin from the node config
-                    {% set plugin = node.config.plugin %}
+            {% for node in graph.nodes.values() | selectattr("name", "equalto", modelname) %}
+                -- Get the associated materialization from the node config
+                {% set materialization = node.config.materialized %}
+                -- Get the associated plugin from the node config
+                {% set plugin = node.config.plugin %}
 
-                    {% if plugin == 'unity' and materialization == 'external_table' %}
-                        {% set catalog = var('catalog', 'unity') %}
-                        -- Get the associated schema from the node config
-                        {% set schema = node.config.schema %}
+                {% if plugin == 'unity' and materialization == 'external_table' %}
+                    {% set catalog = var('catalog', 'unity') %}
+                    -- Get the associated schema from the node config
+                    {% set schema = node.config.schema %}
 
-                        {% if not schema %}
-                            {% set schema = 'default' %}
-                        {% endif %}
-
-                        {% set new_rel = catalog ~ '.' ~ schema ~ '.' ~ rel.identifier %}
-
-                        {% do return(new_rel) %}
-                    {% else %}
-                        {% do return(rel) %}
+                    {% if not schema %}
+                        {% set schema = 'default' %}
                     {% endif %}
+
+                    {% set new_rel = catalog ~ '.' ~ schema ~ '.' ~ rel.identifier %}
+
+                    {% do return(new_rel) %}
+                {% else %}
+                    {% do return(rel) %}
                 {% endif %}
             {% endfor %}
         {% endif %}
