@@ -27,7 +27,8 @@
                 {% set plugin = node.config.plugin %}
 
                 {% if plugin == 'unity' and materialization == 'external_table' %}
-                    {% set catalog = var('catalog', 'unity') %}
+                    -- Retrieve the catalog value from the active target configuration
+                    {% set catalog = target.get("catalog", "unity") %}
                     -- Get the associated schema from the node config
                     {% set schema = node.config.schema %}
 

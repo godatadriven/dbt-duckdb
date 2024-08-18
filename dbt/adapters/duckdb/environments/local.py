@@ -6,7 +6,7 @@ from duckdb import CatalogException
 from tenacity import retry
 from tenacity import retry_if_exception_type
 from tenacity import stop_after_attempt
-from tenacity import wait_fixed
+from tenacity import wait_incrementing
 
 from . import Environment
 from .. import credentials
@@ -150,7 +150,7 @@ class LocalEnvironment(Environment):
     def get_retry_decorator(max_attempts: int, wait_time: float):
         return retry(
             stop=stop_after_attempt(max_attempts),
-            wait=wait_fixed(wait_time),
+            wait=wait_incrementing(start=wait_time, increment=0.05),
             retry=retry_if_exception_type(CatalogException),
             reraise=True,
         )
@@ -209,8 +209,8 @@ class LocalEnvironment(Environment):
         cursor = handle.cursor()
 
         # Get the number of retries and the wait time for a dbt model
-        retries = int(target_config.config.get("retries", 30))
-        wait_time = float(target_config.config.get("wait_time", 0.15))
+        retries = int(target_config.config.get("retries", 20))
+        wait_time = float(target_config.config.get("wait_time", 0.05))
 
         # Get the arrow dataframe
         df = self.get_arrow_dataframe(
