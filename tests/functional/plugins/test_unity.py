@@ -66,7 +66,6 @@ class TestPlugins:
                 "outputs": {
                     "dev": {
                         "type": "duckdb",
-                        "threads": 4,
                         "path": dbt_profile_target.get("path", ":memory:"),
                         "plugins": plugins,
                         "extensions": extensions,
