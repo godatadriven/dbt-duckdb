@@ -337,7 +337,7 @@ jobs:
           tox --version
 
       - name: Mock Unity catalog server
-        run: ./scripts/mock-uc-server
+        run: ./scripts/mock-uc-server.sh
 
       - name: Run tox
         run: tox
