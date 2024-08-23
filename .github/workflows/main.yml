@@ -336,12 +336,9 @@ jobs:
           python -m pip --version
           tox --version
 
-      - name: Mock Unity catalog server
+      - name: Mock Unity catalog server and run tox
         run: |
-          sh ./scripts/mock-uc-server.sh
-
-      - name: Run tox
-        run: tox
+          sh ./scripts/test-unity.sh
 
       - name: Get current date
         if: always()
