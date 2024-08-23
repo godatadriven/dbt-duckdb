@@ -7,7 +7,6 @@ from typing import Dict
 from typing import Literal
 
 import pyarrow as pa
-from deltalake import DeltaTable
 from unitycatalog import Unitycatalog
 from unitycatalog.types import TableInfo
 from unitycatalog.types.table_create_params import Column
@@ -193,32 +192,7 @@ class Plugin(BasePlugin):
         self.uc_client: Unitycatalog = Unitycatalog(base_url=catalog_base_url)
 
     def load(self, source_config: SourceConfig):
-        # Assert that the source_config has a name, schema, and database
-        assert source_config.name is not None, "Name is required for loading data!"
-        assert source_config.schema is not None, "Schema is required for loading data!"
-        assert source_config.database is not None, "Database is required for loading data!"
-
-        table_path = get_storage_location(
-            self.uc_client, source_config.name, source_config.schema, source_config.database
-        )
-
-        storage_options = source_config.get("storage_options", {})
-
-        dt = DeltaTable(table_path, storage_options=storage_options)
-
-        # delta attributes
-        as_of_version = source_config.get("as_of_version", None)
-        as_of_datetime = source_config.get("as_of_datetime", None)
-
-        if as_of_version:
-            dt.load_version(as_of_version)
-
-        if as_of_datetime:
-            dt.load_with_datetime(as_of_datetime)
-
-        df = dt.to_pyarrow_dataset()
-
-        return df
+        raise NotImplementedError("Load method is not supported/needed for unity plugin!")
 
     def store(self, target_config: TargetConfig, df: pa.lib.Table = None):
         # Assert that the target_config has a location and relation identifier
