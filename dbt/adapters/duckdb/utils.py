@@ -7,6 +7,12 @@ from typing import List
 from typing import Optional
 from typing import Sequence
 
+from duckdb.duckdb import DatabaseError
+from tenacity import retry
+from tenacity import retry_if_exception_type
+from tenacity import stop_after_attempt
+from tenacity import wait_incrementing
+
 from dbt.adapters.base.column import Column
 from dbt.adapters.base.relation import BaseRelation
 from dbt.adapters.contracts.relation import RelationConfig
@@ -106,3 +112,12 @@ class SecretTypeMissingError(Exception):
     """Exception raised when the secret type is missing from the secrets dictionary."""
 
     pass
+
+
+def get_retry_decorator(max_attempts: int, wait_time: float, exception: DatabaseError):
+    return retry(
+        stop=stop_after_attempt(max_attempts),
+        wait=wait_incrementing(start=wait_time, increment=0.05),
+        retry=retry_if_exception_type(exception),
+        reraise=True,
+    )

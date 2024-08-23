@@ -3,14 +3,12 @@ import threading
 import pyarrow
 from dbt_common.exceptions import DbtRuntimeError
 from duckdb import CatalogException
-from tenacity import retry
-from tenacity import retry_if_exception_type
-from tenacity import stop_after_attempt
-from tenacity import wait_incrementing
+from duckdb import TransactionException
 
 from . import Environment
 from .. import credentials
 from .. import utils
+from ..utils import get_retry_decorator
 from dbt.adapters.contracts.connection import AdapterResponse
 from dbt.adapters.contracts.connection import Connection
 
@@ -73,17 +71,23 @@ class LocalEnvironment(Environment):
     def cancel(cls, connection: Connection):
         connection.handle.cursor().interrupt()
 
+    @get_retry_decorator(20, 0.05, TransactionException)
     def handle(self):
-        # Extensions/settings need to be configured per cursor
-        with self.lock:
-            if self.conn is None:
-                self.conn = self.initialize_db(self.creds, self._plugins)
-            self.handle_count += 1
+        try:
+            # Extensions/settings need to be configured per cursor
+            with self.lock:
+                if self.conn is None:
+                    self.conn = self.initialize_db(self.creds, self._plugins)
+                self.handle_count += 1
 
-        cursor = self.initialize_cursor(
-            self.creds, self.conn.cursor(), self._plugins, self._REGISTERED_DF
-        )
-        return DuckDBConnectionWrapper(cursor, self)
+            cursor = self.initialize_cursor(
+                self.creds, self.conn.cursor(), self._plugins, self._REGISTERED_DF
+            )
+            return DuckDBConnectionWrapper(cursor, self)
+        except TransactionException as e:
+            # Raise the exception to retry the operation for a transaction for concurrent exceptions
+
+            raise TransactionException(f"{str(e)}")
 
     def submit_python_job(self, handle, parsed_model: dict, compiled_code: str) -> AdapterResponse:
         con = handle.cursor()
@@ -146,15 +150,6 @@ class LocalEnvironment(Environment):
         cursor.close()
         handle.close()
 
-    @staticmethod
-    def get_retry_decorator(max_attempts: int, wait_time: float):
-        return retry(
-            stop=stop_after_attempt(max_attempts),
-            wait=wait_incrementing(start=wait_time, increment=0.05),
-            retry=retry_if_exception_type(CatalogException),
-            reraise=True,
-        )
-
     def get_arrow_dataframe(
         self, compiled_code: str, retries: int, wait_time: float
     ) -> pyarrow.lib.Table:
@@ -167,7 +162,7 @@ class LocalEnvironment(Environment):
         :returns: Arrow dataframe
         """
 
-        @self.get_retry_decorator(retries, wait_time)
+        @get_retry_decorator(retries, wait_time, CatalogException)
         def execute_query():
             try:
                 # Get the handle and cursor
