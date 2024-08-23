@@ -71,7 +71,6 @@ class LocalEnvironment(Environment):
     def cancel(cls, connection: Connection):
         connection.handle.cursor().interrupt()
 
-    @get_retry_decorator(20, 0.05, TransactionException)
     def handle(self):
         try:
             # Extensions/settings need to be configured per cursor
@@ -84,10 +83,10 @@ class LocalEnvironment(Environment):
                 self.creds, self.conn.cursor(), self._plugins, self._REGISTERED_DF
             )
             return DuckDBConnectionWrapper(cursor, self)
-        except TransactionException as e:
+        except TransactionException:
             # Raise the exception to retry the operation for a transaction for concurrent exceptions
 
-            raise TransactionException(f"{str(e)}")
+            raise TransactionException("test")
 
     def submit_python_job(self, handle, parsed_model: dict, compiled_code: str) -> AdapterResponse:
         con = handle.cursor()

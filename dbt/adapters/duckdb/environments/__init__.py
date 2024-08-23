@@ -10,6 +10,10 @@ from typing import Optional
 
 import duckdb
 from dbt_common.exceptions import DbtRuntimeError
+from tenacity import retry
+from tenacity import retry_if_exception_type
+from tenacity import stop_after_attempt
+from tenacity import wait_random
 
 from ..credentials import DuckDBCredentials
 from ..plugins import BasePlugin
@@ -130,6 +134,13 @@ class Environment(abc.ABC):
         pass
 
     @classmethod
+    # retry decorator to handle concurrent transactions
+    @retry(
+        stop=stop_after_attempt(50),
+        wait=wait_random(min=0.05, max=0.25),
+        retry=retry_if_exception_type(duckdb.TransactionException),
+        reraise=True,
+    )
     def initialize_db(
         cls, creds: DuckDBCredentials, plugins: Optional[Dict[str, BasePlugin]] = None
     ):
@@ -204,6 +215,13 @@ class Environment(abc.ABC):
         return conn
 
     @classmethod
+    # retry decorator to handle concurrent transactions
+    @retry(
+        stop=stop_after_attempt(50),
+        wait=wait_random(min=0.05, max=0.25),
+        retry=retry_if_exception_type(duckdb.TransactionException),
+        reraise=True,
+    )
     def initialize_cursor(
         cls,
         creds: DuckDBCredentials,
