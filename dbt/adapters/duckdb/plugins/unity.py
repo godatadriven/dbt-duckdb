@@ -22,10 +22,6 @@ class StorageFormat(str, Enum):
     DELTA = "DELTA"
 
 
-class StorageLocationMissingError(Exception):
-    """Exception raised when the storage location is missing for a unity catalog table."""
-
-
 def uc_schema_exists(client: Unitycatalog, schema_name: str, catalog_name: str = "unity") -> bool:
     """Check if a UC schema exists in the catalog."""
     schema_list_request = client.schemas.list(catalog_name=catalog_name)
