@@ -30,7 +30,7 @@ if ! is_overriding_api_base_url && ! prism_is_running ; then
   trap 'kill_server_on_port 4010' EXIT
 
   # Start the dev server
-  ./scripts/mock-uc-server --daemon
+  ./scripts/mock-uc-server.sh --daemon
 fi
 
 if is_overriding_api_base_url ; then
