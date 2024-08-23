@@ -59,6 +59,8 @@ class TestPlugins:
     @pytest.fixture(scope="class")
     def profiles_config_update(self, dbt_profile_target):
         plugins = [{"module": "unity"}]
+        extensions = dbt_profile_target.get("extensions")
+        extensions.extend([{"name": "delta"}])
         return {
             "test": {
                 "outputs": {
@@ -66,21 +68,9 @@ class TestPlugins:
                         "type": "duckdb",
                         "path": dbt_profile_target.get("path", ":memory:"),
                         "plugins": plugins,
-                        "attach": [
-                            {"path": "unity",
-                             "alias": "unity",
-                             "type": "UC_CATALOG"},
-                        ],
-                        "extensions": [{"name": "delta"},
-                                       {"name": "uc_catalog",
-                                        "repository": "http://nightly-extensions.duckdb.org"}],
-                        "secrets": [{
-                            "type": "UC",
-                            # here our mock uc server is running, prism defaults to 4010
-                            "endpoint": "http://127.0.0.1:4010",
-                            "token": "test",
-                            "aws_region": "eu-west-1"
-                        }]
+                        "extensions": extensions,
+                        "secrets": dbt_profile_target.get("secrets"),
+                        "attach": dbt_profile_target.get("attach")
                     }
                 },
                 "target": "dev",
