@@ -11,22 +11,7 @@ select 2 as a, 'test' as b
 """
 
 
-def delta1_sql(location: str) -> str:
-    return f"""
-    {{ config(
-        materialized='external_table',
-        plugin = 'delta',
-        location = '{location}',
-        storage_options = {
-    'test' : 'test'
-        }
-
-    ) }}
-    select * from {{ref('ref1')}} 
-"""
-
-
-def delta2_sql(location: str) -> str:
+def delta_table_sql(location: str) -> str:
     return f"""
     {{{{ config(
         materialized='external_table',
@@ -43,10 +28,10 @@ def delta2_sql(location: str) -> str:
 @pytest.mark.skip_profile("buenavista", "md")
 class TestPlugins:
     @pytest.fixture(scope="class")
-    def delta_test_table1(self):
+    def delta_test_table(self):
         td = tempfile.TemporaryDirectory()
         path = Path(td.name)
-        table_path = path / "test_delta_table1"
+        table_path = path / "test_delta_table"
 
         yield table_path
 
@@ -69,25 +54,13 @@ class TestPlugins:
         }
 
     @pytest.fixture(scope="class")
-    def models(self, delta_test_table1):
+    def models(self, delta_test_table):
         return {
 
-            "delta_table2.sql": delta2_sql(str(delta_test_table1)),
+            "delta_table.sql": delta_table_sql(str(delta_test_table)),
             "ref1.sql": ref1
         }
-
 
     def test_plugins(self, project):
         results = run_dbt()
         assert len(results) == 2
-
-        # materializing external view not yet supported
-        # check_relations_equal(
-        #     project.adapter,
-        #     [
-        #         "delta_table2",
-        #         "delta_table2_expected",
-        #     ],
-        # )
-        # res = project.run_sql("SELECT count(1) FROM 'memory.delta_table2'", fetch="one")
-        # assert res[0] == 2

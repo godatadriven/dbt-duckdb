@@ -120,13 +120,3 @@ class TestPlugins:
     def test_plugins(self, project):
         results = run_dbt()
         assert len(results) == 4
-
-        # check_relations_equal(
-        #     project.adapter,
-        #     [
-        #         "delta_table3",
-        #         "delta_table3_expected",
-        #     ],
-        # )
-        # res = project.run_sql("SELECT count(1) FROM 'delta_table3'", fetch="one")
-        # assert res[0] == 2

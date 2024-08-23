@@ -50,7 +50,7 @@ class TestPlugins:
     def unity_create_table_and_schema(self):
         td = tempfile.TemporaryDirectory()
         path = Path(td.name)
-        table_path = path / "test_unity_read_table"
+        table_path = path / "test_unity_create_table_and_schema"
 
         yield table_path
 
