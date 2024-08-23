@@ -6,10 +6,6 @@ from dbt.tests.util import (
     run_dbt,
 )
 
-delta_schema_yml = """
-
-"""
-
 ref1 = """
 select 2 as a, 'test' as b 
 """

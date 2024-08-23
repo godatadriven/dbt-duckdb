@@ -45,7 +45,7 @@ group by all
 """
 
 
-@pytest.mark.skip_profile("buenavista", "file", "memory")
+@pytest.mark.skip_profile("buenavista", "file", "memory", "unity")
 class TestMDPlugin:
     @pytest.fixture(scope="class")
     def profiles_config_update(self, dbt_profile_target):

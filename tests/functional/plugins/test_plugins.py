@@ -41,7 +41,7 @@ plugin_sql = """
 """
 
 
-@pytest.mark.skip_profile("buenavista", "md")
+@pytest.mark.skip_profile("buenavista", "md", "unity")
 class TestPlugins:
     @pytest.fixture(scope="class")
     def sqlite_test_db(self):

@@ -190,9 +190,7 @@ class Plugin(BasePlugin):
         catalog_base_url = uc_secret["endpoint"]
 
         # Initialize the Unitycatalog client
-        self.uc_client: Unitycatalog = Unitycatalog(
-            base_url=f"{catalog_base_url}/api/2.1/unity-catalog"
-        )
+        self.uc_client: Unitycatalog = Unitycatalog(base_url=catalog_base_url)
 
     def load(self, source_config: SourceConfig):
         # Assert that the source_config has a name, schema, and database
