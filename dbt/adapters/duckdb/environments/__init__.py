@@ -10,10 +10,6 @@ from typing import Optional
 
 import duckdb
 from dbt_common.exceptions import DbtRuntimeError
-from tenacity import retry
-from tenacity import retry_if_exception_type
-from tenacity import stop_after_attempt
-from tenacity import wait_random
 
 from ..credentials import DuckDBCredentials
 from ..plugins import BasePlugin
@@ -134,13 +130,6 @@ class Environment(abc.ABC):
         pass
 
     @classmethod
-    # retry decorator to handle concurrent transactions
-    @retry(
-        stop=stop_after_attempt(50),
-        wait=wait_random(min=0.05, max=0.25),
-        retry=retry_if_exception_type(duckdb.TransactionException),
-        reraise=True,
-    )
     def initialize_db(
         cls, creds: DuckDBCredentials, plugins: Optional[Dict[str, BasePlugin]] = None
     ):
@@ -187,6 +176,7 @@ class Environment(abc.ABC):
                 conn.install_extension(extension.name)
                 conn.load_extension(extension.name)
 
+        # install any secrets on the connection
         if creds.secrets:
             for sql in creds.secrets_sql():
                 conn.execute(sql)
@@ -215,13 +205,6 @@ class Environment(abc.ABC):
         return conn
 
     @classmethod
-    # retry decorator to handle concurrent transactions
-    @retry(
-        stop=stop_after_attempt(50),
-        wait=wait_random(min=0.05, max=0.25),
-        retry=retry_if_exception_type(duckdb.TransactionException),
-        reraise=True,
-    )
     def initialize_cursor(
         cls,
         creds: DuckDBCredentials,
@@ -234,9 +217,6 @@ class Environment(abc.ABC):
                 # Okay to set these as strings because DuckDB will cast them
                 # to the correct type
                 cursor.execute(f"SET {key} = '{value}'")
-
-        for sql in creds.secrets_sql():
-            cursor.execute(sql)
 
         # update cursor if something is lost in the copy
         # of the parent connection

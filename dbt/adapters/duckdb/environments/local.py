@@ -3,7 +3,6 @@ import threading
 import pyarrow
 from dbt_common.exceptions import DbtRuntimeError
 from duckdb import CatalogException
-from duckdb import TransactionException
 
 from . import Environment
 from .. import credentials
@@ -72,21 +71,16 @@ class LocalEnvironment(Environment):
         connection.handle.cursor().interrupt()
 
     def handle(self):
-        try:
-            # Extensions/settings need to be configured per cursor
-            with self.lock:
-                if self.conn is None:
-                    self.conn = self.initialize_db(self.creds, self._plugins)
-                self.handle_count += 1
+        # Extensions/settings need to be configured per cursor
+        with self.lock:
+            if self.conn is None:
+                self.conn = self.initialize_db(self.creds, self._plugins)
+            self.handle_count += 1
 
-            cursor = self.initialize_cursor(
-                self.creds, self.conn.cursor(), self._plugins, self._REGISTERED_DF
-            )
-            return DuckDBConnectionWrapper(cursor, self)
-        except TransactionException:
-            # Raise the exception to retry the operation for a transaction for concurrent exceptions
-
-            raise TransactionException("test")
+        cursor = self.initialize_cursor(
+            self.creds, self.conn.cursor(), self._plugins, self._REGISTERED_DF
+        )
+        return DuckDBConnectionWrapper(cursor, self)
 
     def submit_python_job(self, handle, parsed_model: dict, compiled_code: str) -> AdapterResponse:
         con = handle.cursor()
