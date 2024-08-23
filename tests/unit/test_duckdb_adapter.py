@@ -115,7 +115,7 @@ class TestDuckDBAdapterWithSecrets(unittest.TestCase):
         DuckDBConnectionManager.close_all_connections()
         connection = self.adapter.acquire_connection("dummy")
         assert connection.handle
-        connection.handle._cursor._cursor.execute.assert_called_with(
+        connection.handle._conn.execute.assert_called_with(
 """CREATE OR REPLACE SECRET __default_s3 (
     type s3,
     key_id 'abc',

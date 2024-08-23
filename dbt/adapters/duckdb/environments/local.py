@@ -32,6 +32,7 @@ class DuckDBCursorWrapper:
 
 class DuckDBConnectionWrapper:
     def __init__(self, cursor, env):
+        self._conn = env.conn
         self._cursor = DuckDBCursorWrapper(cursor)
         self._env = env
 
