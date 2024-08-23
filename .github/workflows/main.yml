@@ -337,8 +337,7 @@ jobs:
           tox --version
 
       - name: Mock Unity catalog server and run tox
-        run: |
-          sh ./scripts/test-unity.sh
+        run: ./scripts/test-unity
 
       - name: Get current date
         if: always()
