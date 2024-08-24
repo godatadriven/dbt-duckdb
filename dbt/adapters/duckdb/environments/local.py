@@ -102,7 +102,8 @@ class LocalEnvironment(Environment):
         handle = self.handle()
         cursor = handle.cursor()
 
-        if source_config.schema:
+        # Schema creation is currently not supported by the uc_catalog duckdb extension
+        if source_config.schema and plugin_name != "unity":
             cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {source_config.schema}")
 
         save_mode = source_config.get("save_mode", "overwrite")
@@ -137,9 +138,11 @@ class LocalEnvironment(Environment):
             # save to df instance to register on each cursor creation
             self._REGISTERED_DF[df_name] = df
 
-        cursor.execute(
-            f"CREATE OR REPLACE {materialization} {source_table_name} AS SELECT * FROM {df_name}"
-        )
+        # CREATE OR REPLACE table creation is currently not supported by the uc_catalog duckdb extension
+        if plugin_name != "unity":
+            cursor.execute(
+                f"CREATE OR REPLACE {materialization} {source_table_name} AS SELECT * FROM {df_name}"
+            )
 
         cursor.close()
         handle.close()

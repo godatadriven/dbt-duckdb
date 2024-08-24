@@ -139,6 +139,19 @@ def delta_write(
     # TODO: Add support for OPTIMIZE
 
 
+def delta_load(table_path: str, storage_options: dict, as_of_version: int, as_of_datetime: str):
+    """Load a delta table as a pyarrow dataset."""
+    dt = DeltaTable(table_path, storage_options=storage_options)
+
+    if as_of_version:
+        dt.load_version(as_of_version)
+
+    if as_of_datetime:
+        dt.load_with_datetime(as_of_datetime)
+
+    return dt.to_pyarrow_dataset()
+
+
 class Plugin(BasePlugin):
     def initialize(self, config: Dict[str, Any]):
         pass
@@ -152,22 +165,20 @@ class Plugin(BasePlugin):
                 "'delta_table_path' is a required argument for the delta table!"
             )
 
+        # Get required variables from the source configuration
         table_path = source_config["delta_table_path"]
-        storage_options = source_config.get("storage_options", {})
 
-        dt = DeltaTable(table_path, storage_options=storage_options)
-
-        # delta attributes
+        # Get optional variables from the source configuration
         as_of_version = source_config.get("as_of_version", None)
         as_of_datetime = source_config.get("as_of_datetime", None)
+        storage_options = source_config.get("storage_options", {})
 
-        if as_of_version:
-            dt.load_version(as_of_version)
-
-        if as_of_datetime:
-            dt.load_with_datetime(as_of_datetime)
-
-        df = dt.to_pyarrow_dataset()
+        df = delta_load(
+            table_path=table_path,
+            storage_options=storage_options,
+            as_of_version=as_of_version,
+            as_of_datetime=as_of_datetime,
+        )
 
         return df
 

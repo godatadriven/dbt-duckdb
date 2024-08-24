@@ -8,6 +8,7 @@ from typing import Literal
 
 import pyarrow as pa
 from unitycatalog import Unitycatalog
+from unitycatalog.types import TableInfo
 from unitycatalog.types.table_create_params import Column
 
 from . import BasePlugin
@@ -20,6 +21,10 @@ class StorageFormat(str, Enum):
     """Enum class for the storage formats supported by the plugin."""
 
     DELTA = "DELTA"
+
+
+class StorageLocationMissingError(Exception):
+    """Exception raised when the storage location is missing for a unity catalog table."""
 
 
 def uc_schema_exists(client: Unitycatalog, schema_name: str, catalog_name: str = "unity") -> bool:
@@ -45,6 +50,21 @@ def uc_table_exists(
     return table_name in [table.name for table in table_list_request.tables]
 
 
+def get_storage_location(
+    client: Unitycatalog, table_name: str, schema_name: str, catalog_name: str = "unity"
+) -> str:
+    """Get the storage location of a UC table."""
+    table: TableInfo = client.tables.retrieve(
+        full_name=f"{catalog_name}.{schema_name}.{table_name}"
+    )
+
+    if table.storage_location is None:
+        raise StorageLocationMissingError(
+            f"Table {catalog_name}.{schema_name}.{table_name} does not have a storage location!"
+        )
+    return table.storage_location
+
+
 UCSupportedTypeLiteral = Literal[
     "BOOLEAN",
     "BYTE",
@@ -68,6 +88,8 @@ UCSupportedTypeLiteral = Literal[
     "USER_DEFINED_TYPE",
     "TABLE_TYPE",
 ]
+
+UCSupportedFormatLiteral = Literal["DELTA", "CSV", "JSON", "AVRO", "PARQUET", "ORC", "TEXT"]
 
 
 def pyarrow_type_to_supported_uc_json_type(data_type: pa.DataType) -> UCSupportedTypeLiteral:
@@ -147,6 +169,35 @@ def pyarrow_schema_to_columns(schema: pa.Schema) -> list[Column]:
     return columns
 
 
+def create_table_if_not_exists(
+    uc_client: Unitycatalog,
+    table_name: str,
+    schema_name: str,
+    catalog_name: str,
+    storage_location: str,
+    schema: list[Column],
+    storage_format: UCSupportedFormatLiteral,
+):
+    """Create or update a Unitycatalog table."""
+
+    if not uc_schema_exists(uc_client, schema_name, catalog_name):
+        uc_client.schemas.create(catalog_name=catalog_name, name=schema_name)
+
+    if not uc_table_exists(uc_client, table_name, schema_name, catalog_name):
+        uc_client.tables.create(
+            catalog_name=catalog_name,
+            columns=schema,
+            data_source_format=storage_format,
+            name=table_name,
+            schema_name=schema_name,
+            table_type="EXTERNAL",
+            storage_location=storage_location,
+        )
+    else:
+        # TODO: Add support for schema checks/schema evolution with existing schema and dataframe schema
+        pass
+
+
 class Plugin(BasePlugin):
     # The name of the catalog
     catalog_name: str = "unity"
@@ -172,7 +223,48 @@ class Plugin(BasePlugin):
         self.uc_client: Unitycatalog = Unitycatalog(base_url=catalog_base_url)
 
     def load(self, source_config: SourceConfig):
-        raise NotImplementedError("Load method is not supported/needed for unity plugin!")
+        # Assert that the source_config has a name, schema, and database
+        assert source_config.identifier is not None, "Name is required for loading data!"
+        assert source_config.schema is not None, "Schema is required for loading data!"
+        assert source_config.get("location") is not None, "Location is required for loading data!"
+
+        # Get the required variables from the source configuration
+        table_path = source_config.get("location")
+        table_name = source_config.identifier
+        schema_name = source_config.schema
+
+        # Get the optional variables from the source configuration
+        storage_format = source_config.get("format", self.default_format)
+        storage_options = source_config.get("storage_options", {})
+        as_of_version = source_config.get("as_of_version", None)
+        as_of_datetime = source_config.get("as_of_datetime", None)
+
+        if storage_format == StorageFormat.DELTA:
+            from .delta import delta_load
+
+            df = delta_load(
+                table_path=table_path,
+                storage_options=storage_options,
+                as_of_version=as_of_version,
+                as_of_datetime=as_of_datetime,
+            )
+        else:
+            raise NotImplementedError(f"Loading storage format {storage_format} not supported!")
+
+        converted_schema = pyarrow_schema_to_columns(schema=df.schema)
+
+        # Create he table in the Unitycatalog if it does not exist
+        create_table_if_not_exists(
+            uc_client=self.uc_client,
+            table_name=table_name,
+            schema_name=schema_name,
+            catalog_name=self.catalog_name,
+            storage_location=table_path,
+            schema=converted_schema,
+            storage_format=storage_format,
+        )
+
+        return df
 
     def store(self, target_config: TargetConfig, df: pa.lib.Table = None):
         # Assert that the target_config has a location and relation identifier
@@ -203,22 +295,16 @@ class Plugin(BasePlugin):
         # Convert the pa schema to columns
         converted_schema = pyarrow_schema_to_columns(schema=df.schema)
 
-        if not uc_schema_exists(self.uc_client, schema_name, self.catalog_name):
-            self.uc_client.schemas.create(catalog_name=self.catalog_name, name=schema_name)
-
-        if not uc_table_exists(self.uc_client, table_name, schema_name, self.catalog_name):
-            self.uc_client.tables.create(
-                catalog_name=self.catalog_name,
-                columns=converted_schema,
-                data_source_format=storage_format,
-                name=table_name,
-                schema_name=schema_name,
-                table_type="EXTERNAL",
-                storage_location=table_path,
-            )
-        else:
-            # TODO: Add support for schema checks/schema evolution with existing schema and dataframe schema
-            pass
+        # Create he table in the Unitycatalog if it does not exist
+        create_table_if_not_exists(
+            uc_client=self.uc_client,
+            table_name=table_name,
+            schema_name=schema_name,
+            catalog_name=self.catalog_name,
+            storage_location=table_path,
+            schema=converted_schema,
+            storage_format=storage_format,
+        )
 
         if storage_format == StorageFormat.DELTA:
             from .delta import delta_write
@@ -231,3 +317,5 @@ class Plugin(BasePlugin):
                 partition_key=partition_key,
                 unique_key=unique_key,
             )
+        else:
+            raise NotImplementedError(f"Writing storage format {storage_format} not supported!")
