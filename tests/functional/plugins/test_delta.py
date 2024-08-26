@@ -111,12 +111,12 @@ class TestPlugins:
         results = run_dbt()
         assert len(results) == 4
 
-        delta_table1_row_count = get_table_row_count(project, "memory.main.delta_table1")
+        delta_table1_row_count = get_table_row_count(project, "main.delta_table1")
         assert delta_table1_row_count == 3
 
-        delta_table2_row_count = get_table_row_count(project, "memory.main.delta_table2")
+        delta_table2_row_count = get_table_row_count(project, "main.delta_table2")
         assert delta_table2_row_count == 1
 
-        delta_table3_row_count = get_table_row_count(project, "memory.main.delta_table3")
+        delta_table3_row_count = get_table_row_count(project, "main.delta_table3")
         assert delta_table3_row_count == 0
 

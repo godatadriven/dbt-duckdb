@@ -62,5 +62,5 @@ class TestPlugins:
         results = run_dbt()
         assert len(results) == 2
 
-        delta_table_row_count = get_table_row_count(project, "memory.main.delta_table")
+        delta_table_row_count = get_table_row_count(project, "main.delta_table")
         assert delta_table_row_count == 1
