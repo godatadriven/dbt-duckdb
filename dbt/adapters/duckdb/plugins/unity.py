@@ -203,7 +203,8 @@ class Plugin(BasePlugin):
         # Construct the full base URL
         catalog_base_url = f"{host_and_port}/api/2.1/unity-catalog"
 
-        # Prism mocks the UC server to http://127.0.0.1:4010 disregarding the basePath (api/2.1/unity-catalog)
+        # Prism mocks the UC server to http://127.0.0.1:4010 with no option to specify a basePath (api/2.1/unity-catalog)
+        # https://github.com/stoplightio/prism/discussions/906
         # This is why we need to check if we are running in pytest and only use the base URL
         # Otherwise we will not be able to connect to the mock UC server
         if "pytest" in sys.modules:
