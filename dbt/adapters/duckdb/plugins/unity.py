@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from enum import Enum
 from typing import Any
 from typing import Dict
@@ -197,10 +198,19 @@ class Plugin(BasePlugin):
         uc_secret = find_secrets_by_type(self.creds.secrets, "UC")
 
         # Get the endpoint from the UC secret
-        catalog_base_url = uc_secret["endpoint"]
+        host_and_port = uc_secret["endpoint"]
 
-        # Initialize the Unitycatalog client
-        self.uc_client: Unitycatalog = Unitycatalog(base_url=catalog_base_url)
+        # Construct the full base URL
+        catalog_base_url = f"{host_and_port}/api/2.1/unity-catalog"
+
+        # Prism mocks the UC server to http://127.0.0.1:4010 disregarding the basePath (api/2.1/unity-catalog)
+        # This is why we need to check if we are running in pytest and only use the base URL
+        # Otherwise we will not be able to connect to the mock UC server
+        if "pytest" in sys.modules:
+            self.uc_client: Unitycatalog = Unitycatalog(base_url=host_and_port)
+        else:
+            # Otherwise, use the full base URL
+            self.uc_client: Unitycatalog = Unitycatalog(base_url=catalog_base_url)
 
     def load(self, source_config: SourceConfig):
         # Assert that the source_config has a name, schema, and database
