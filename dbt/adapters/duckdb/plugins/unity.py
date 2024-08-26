@@ -8,7 +8,6 @@ from typing import Literal
 
 import pyarrow as pa
 from unitycatalog import Unitycatalog
-from unitycatalog.types import TableInfo
 from unitycatalog.types.table_create_params import Column
 
 from . import BasePlugin
@@ -21,10 +20,6 @@ class StorageFormat(str, Enum):
     """Enum class for the storage formats supported by the plugin."""
 
     DELTA = "DELTA"
-
-
-class StorageLocationMissingError(Exception):
-    """Exception raised when the storage location is missing for a unity catalog table."""
 
 
 def uc_schema_exists(client: Unitycatalog, schema_name: str, catalog_name: str = "unity") -> bool:
@@ -48,21 +43,6 @@ def uc_table_exists(
         return False
 
     return table_name in [table.name for table in table_list_request.tables]
-
-
-def get_storage_location(
-    client: Unitycatalog, table_name: str, schema_name: str, catalog_name: str = "unity"
-) -> str:
-    """Get the storage location of a UC table."""
-    table: TableInfo = client.tables.retrieve(
-        full_name=f"{catalog_name}.{schema_name}.{table_name}"
-    )
-
-    if table.storage_location is None:
-        raise StorageLocationMissingError(
-            f"Table {catalog_name}.{schema_name}.{table_name} does not have a storage location!"
-        )
-    return table.storage_location
 
 
 UCSupportedTypeLiteral = Literal[
