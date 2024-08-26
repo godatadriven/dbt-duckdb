@@ -3,8 +3,9 @@ from pathlib import Path
 
 import pytest
 from dbt.tests.util import (
-    run_dbt,
-)
+    run_dbt, )
+
+from tests.functional.plugins.utils import get_table_row_count
 
 ref1 = """
 select 2 as a, 'test' as b 
@@ -14,7 +15,7 @@ select 2 as a, 'test' as b
 def delta_table_sql(location: str) -> str:
     return f"""
     {{{{ config(
-        materialized='external_table',
+        materialized='table',
         plugin = 'delta',
         location = '{location}',
         mode = 'merge',
@@ -29,13 +30,9 @@ def delta_table_sql(location: str) -> str:
 class TestPlugins:
     @pytest.fixture(scope="class")
     def delta_test_table(self):
-        td = tempfile.TemporaryDirectory()
-        path = Path(td.name)
-        table_path = path / "test_delta_table"
-
-        yield table_path
-
-        td.cleanup()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            table_path = Path(tmpdir) / "test_delta_table"
+            yield table_path
 
     @pytest.fixture(scope="class")
     def profiles_config_update(self, dbt_profile_target):
@@ -64,3 +61,6 @@ class TestPlugins:
     def test_plugins(self, project):
         results = run_dbt()
         assert len(results) == 2
+
+        delta_table_row_count = get_table_row_count(project, "memory.main.delta_table")
+        assert delta_table_row_count == 1

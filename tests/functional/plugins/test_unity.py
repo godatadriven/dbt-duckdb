@@ -65,38 +65,26 @@ def unity_create_table_and_schema_sql(location: str) -> str:
 class TestPlugins:
     @pytest.fixture(scope="class")
     def unity_source_table(self):
-        td = tempfile.TemporaryDirectory()
-        path = Path(td.name)
-        table_path = path / "unity_source_table"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            table_path = Path(tmpdir) / "unity_source_table"
 
-        df = pd.DataFrame({"x": [1, 2, 3]})
-        write_deltalake(table_path, df, mode="overwrite")
+            df = pd.DataFrame({"x": [1, 2, 3]})
+            write_deltalake(table_path, df, mode="overwrite")
 
-        yield table_path
-
-        td.cleanup()
+            yield table_path
 
     @pytest.fixture(scope="class")
     def unity_source_table_with_version(self):
-        td = tempfile.TemporaryDirectory()
-        path = Path(td.name)
-        table_path = path / "unity_source_table_with_version"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            table_path = Path(tmpdir) / "unity_source_table_with_version"
 
-        df = pd.DataFrame({
-            "x": [1],
-            "y": ["a"]
-        })
-        write_deltalake(table_path, df, mode="overwrite")
+            df1 = pd.DataFrame({"x": [1], "y": ["a"]})
+            write_deltalake(table_path, df1, mode="overwrite")
 
-        df = pd.DataFrame({
-            "x": [1, 2],
-            "y": ["a", "b"]
-        })
-        write_deltalake(table_path, df, mode="overwrite")
+            df2 = pd.DataFrame({"x": [1, 2], "y": ["a", "b"]})
+            write_deltalake(table_path, df2, mode="overwrite")
 
-        yield table_path
-
-        td.cleanup()
+            yield table_path
 
     @pytest.fixture(scope="class")
     def unity_create_table(self):

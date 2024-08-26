@@ -306,7 +306,7 @@ jobs:
           path: buenavista_results.csv
 
   unity:
-    name: Unity functional test / python ${{ matrix.python-version }}
+    name: Unity Catalog functional test / python ${{ matrix.python-version }}
 
     runs-on: ubuntu-latest
 
