@@ -9,6 +9,7 @@ from typing import Literal
 
 import pyarrow as pa
 from unitycatalog import Unitycatalog
+from unitycatalog.types import GenerateTemporaryTableCredentialResponse
 from unitycatalog.types.table_create_params import Column
 
 from . import BasePlugin
@@ -44,6 +45,33 @@ def uc_table_exists(
         return False
 
     return table_name in [table.name for table in table_list_request.tables]
+
+
+def uc_get_storage_credentials(
+    client: Unitycatalog, catalog_name: str, schema_name: str, table_name: str
+) -> dict:
+    """Get temporary table credentials for a UC table if they exist."""
+
+    # Get the table ID
+    table_id = client.tables.retrieve(
+        full_name=f"{catalog_name}.{schema_name}.{table_name}"
+    ).table_id
+
+    if not table_id:
+        return {}
+
+    # Get the temporary table credentials
+    creds: GenerateTemporaryTableCredentialResponse = client.temporary_table_credentials.create(
+        operation="READ_WRITE", table_id=table_id
+    )
+
+    if creds.aws_temp_credentials:
+        return {
+            "AWS_ACCESS_KEY_ID": creds.aws_temp_credentials.access_key_id,
+            "AWS_SECRET_ACCESS_KEY": creds.aws_temp_credentials.secret_access_key,
+        }
+
+    return {}
 
 
 UCSupportedTypeLiteral = Literal[
@@ -286,7 +314,7 @@ class Plugin(BasePlugin):
         # Convert the pa schema to columns
         converted_schema = pyarrow_schema_to_columns(schema=df.schema)
 
-        # Create he table in the Unitycatalog if it does not exist
+        # Create the table in the Unitycatalog if it does not exist
         create_table_if_not_exists(
             uc_client=self.uc_client,
             table_name=table_name,
@@ -295,6 +323,11 @@ class Plugin(BasePlugin):
             storage_location=table_path,
             schema=converted_schema,
             storage_format=storage_format,
+        )
+
+        # extend the storage options with the temporary table credentials
+        storage_options = storage_options | uc_get_storage_credentials(
+            self.uc_client, self.catalog_name, schema_name, table_name
         )
 
         if storage_format == StorageFormat.DELTA:
