@@ -69,6 +69,7 @@ def uc_get_storage_credentials(
         return {
             "AWS_ACCESS_KEY_ID": creds.aws_temp_credentials.access_key_id,
             "AWS_SECRET_ACCESS_KEY": creds.aws_temp_credentials.secret_access_key,
+            "AWS_SESSION_TOKEN": creds.aws_temp_credentials.session_token,
         }
 
     return {}
