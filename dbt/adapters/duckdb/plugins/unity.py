@@ -53,16 +53,18 @@ def uc_get_storage_credentials(
     """Get temporary table credentials for a UC table if they exist."""
 
     # Get the table ID
-    table_id = client.tables.retrieve(
-        full_name=f"{catalog_name}.{schema_name}.{table_name}"
-    ).table_id
 
-    if not table_id:
+    if not uc_table_exists(client, table_name, schema_name, catalog_name):
+        return {}
+
+    table_response = client.tables.retrieve(full_name=f"{catalog_name}.{schema_name}.{table_name}")
+
+    if not table_response.table_id:
         return {}
 
     # Get the temporary table credentials
     creds: GenerateTemporaryTableCredentialResponse = client.temporary_table_credentials.create(
-        operation="READ_WRITE", table_id=table_id
+        operation="READ_WRITE", table_id=table_response.table_id
     )
 
     if creds.aws_temp_credentials:
