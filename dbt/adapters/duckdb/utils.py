@@ -16,6 +16,7 @@ from tenacity import wait_incrementing
 from dbt.adapters.base.column import Column
 from dbt.adapters.base.relation import BaseRelation
 from dbt.adapters.contracts.relation import RelationConfig
+from dbt.adapters.duckdb.credentials import Attachment
 
 
 # TODO
@@ -101,11 +102,30 @@ class TargetConfig:
 
 
 def find_secrets_by_type(secrets: list[dict], secret_type: str) -> dict:
-    """Find secrets of a specific type in the secrets dictionary."""
+    """Find secrets of a specific type in the `secrets` dictionary."""
     for secret in secrets:
         if secret.get("type") == secret_type:
             return secret
     raise SecretTypeMissingError(f"Secret type {secret_type} not found in the secrets!")
+
+
+def find_attachments_by_type(
+    attachments: list[Attachment] | None, attachment_type: str
+) -> Attachment:
+    """Find the attachment of a specific type in the `attach` dictionary."""
+    if attachments:
+        for attachment in attachments:
+            if attachment.type == attachment_type:
+                return attachment
+    raise AttachmentTypeMissingError(
+        f"Attachment type {attachment_type} not found in the attachments!"
+    )
+
+
+class AttachmentTypeMissingError(Exception):
+    """Exception raised when the attachment type is missing from the attachments dictionary."""
+
+    pass
 
 
 class SecretTypeMissingError(Exception):

@@ -28,7 +28,14 @@
 
                 {% if plugin == 'unity' and materialization == 'external_table' %}
                     -- Retrieve the catalog value from the active target configuration
-                    {% set catalog = target.get("catalog", "unity") %}
+                    {% for attachment in target.get('attach') %}
+                        {% if attachment.get('type') == 'UC_CATALOG' %}
+                            {% set catalog = attachment.get('alias', attachment.get('path')) %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {% do log(catalog) %}
+
                     -- Get the associated schema from the node config
                     {% set schema = node.config.schema %}
 

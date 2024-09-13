@@ -13,6 +13,7 @@ from unitycatalog.types import GenerateTemporaryTableCredentialResponse
 from unitycatalog.types.table_create_params import Column
 
 from . import BasePlugin
+from ..utils import find_attachments_by_type
 from ..utils import find_secrets_by_type
 from ..utils import SourceConfig
 from ..utils import TargetConfig
@@ -212,7 +213,7 @@ def create_table_if_not_exists(
 
 class Plugin(BasePlugin):
     # The name of the catalog
-    catalog_name: str = "unity"
+    catalog_name: str
 
     # The default storage format
     default_format = StorageFormat.DELTA
@@ -227,6 +228,14 @@ class Plugin(BasePlugin):
         # Assert that the credentials and secrets are present
         assert self.creds is not None, "Credentials are required for the plugin!"
         assert self.creds.secrets is not None, "Secrets are required for the plugin!"
+
+        # Find the Unity attachment
+        unity_attachment = find_attachments_by_type(self.creds.attach, "UC_CATALOG")
+
+        # Get the catalog name from the Unity attachment
+        self.catalog_name = (
+            unity_attachment.alias if unity_attachment.alias else unity_attachment.path
+        )
 
         # Find the UC secret
         uc_secret = find_secrets_by_type(self.creds.secrets, "UC")
