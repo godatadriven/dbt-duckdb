@@ -35,3 +35,4 @@ twine
 wheel
 deltalake
 unitycatalog
+pyarrow-unity
