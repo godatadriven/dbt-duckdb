@@ -58,7 +58,7 @@ class TestPlugins:
 
     @pytest.fixture(scope="class")
     def profiles_config_update(self, dbt_profile_target):
-        plugins = [{"module": "unity"}]
+        plugins = [{"module": "unity", "config": {"api_base_path": ""}}]
         extensions = dbt_profile_target.get("extensions")
         extensions.extend([{"name": "delta"}])
         return {
