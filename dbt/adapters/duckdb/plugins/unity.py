@@ -6,7 +6,7 @@ from typing import Dict
 
 import pyarrow as pa
 from pyarrow_unity.model import model_unity_schema
-from pyarrow_unity.model import UCSupportedTypeLiteral
+from pyarrow_unity.model import UCSupportedFormatLiteral
 from unitycatalog import Unitycatalog
 from unitycatalog.types import GenerateTemporaryTableCredentialResponse
 from unitycatalog.types.table_create_params import Column
@@ -83,7 +83,7 @@ def create_table_if_not_exists(
     catalog_name: str,
     storage_location: str,
     schema: list[Column],
-    storage_format: UCSupportedTypeLiteral,
+    storage_format: UCSupportedFormatLiteral,
 ):
     """Create or update a Unitycatalog table."""
 
